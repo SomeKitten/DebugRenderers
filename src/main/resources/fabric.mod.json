@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "debugrenderers",
+  "version": "${version}",
+  "name": "DebugRenderers",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/debugrenderers/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "space.cutekitten.debugrenderers.client.DebugRenderersClient"
+    ],
+    "main": [
+      "space.cutekitten.debugrenderers.DebugRenderers"
+    ]
+  },
+  "mixins": [
+    "debugrenderers.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.8",
+    "fabric": "*",
+    "minecraft": "1.19.1"
+  }
+}
