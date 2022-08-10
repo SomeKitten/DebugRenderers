@@ -13,6 +13,7 @@ import net.minecraft.structure.StructureStart;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.village.raid.Raid;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -23,6 +24,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import space.cutekitten.debugrenderers.client.ClientDB;
+
+import java.util.Collection;
 
 @Mixin(DebugInfoSender.class)
 public class DebugInfoSenderMixin {
@@ -90,4 +93,18 @@ public class DebugInfoSenderMixin {
             ClientDB.newBrains.add(living);
         }
     }
+
+    @Inject(method = "sendRaids", at = @At("RETURN"))
+    private static void sendRaids(ServerWorld server, Collection<Raid> raids, CallbackInfo ci) {
+        ClientDB.newRaids.add(raids);
+    }
+
+
+
+//    @Inject(method = "sendChunkWatchingChange", at = @At("RETURN"))
+//    private static void sendChunkWatchingChange(ServerWorld world, ChunkPos pos, CallbackInfo ci) {
+//        if (pos != null) {
+//            ClientDB.newChunkChanges.add(new Pair<>(world, pos));
+//        }
+//    }
 }

@@ -1,6 +1,5 @@
 package space.cutekitten.debugrenderers.client;
 
-import io.netty.channel.unix.IovArray;
 import net.minecraft.block.entity.BeehiveBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.LivingEntity;
@@ -12,13 +11,17 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.village.raid.Raid;
 import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class ClientDB {
@@ -55,4 +58,6 @@ public class ClientDB {
     public static List<GameEventListener> newGameEventListeners = new ArrayList<>();
     public static List<Pair<MobEntity, GoalSelector>> newGoalSelectors = new ArrayList<>();
     public static List<LivingEntity> newBrains = new ArrayList<>();
+    public static List<Collection<Raid>> newRaids = new ArrayList<>();
+    public static List<Pair<World, ChunkPos>> newChunkChanges;
 }

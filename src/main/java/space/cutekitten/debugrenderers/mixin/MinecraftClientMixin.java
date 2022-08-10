@@ -4,11 +4,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BeehiveBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.debug.BeeDebugRenderer;
-import net.minecraft.client.render.debug.GoalSelectorDebugRenderer;
-import net.minecraft.client.render.debug.NeighborUpdateDebugRenderer;
-import net.minecraft.client.render.debug.VillageDebugRenderer;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.render.debug.*;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.GoalSelector;
@@ -25,12 +21,14 @@ import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.village.raid.Raid;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
 import net.minecraft.world.poi.PointOfInterestTypes;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,6 +37,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import space.cutekitten.debugrenderers.client.ClientDB;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,6 +47,8 @@ public abstract class MinecraftClientMixin {
     @Shadow @Nullable public ClientWorld world;
 
     @Shadow @Nullable public ClientPlayerEntity player;
+
+    @Shadow @Final public DebugRenderer debugRenderer;
 
     @Inject(at = @At("RETURN"), method = "tick")
     private void onEndTick(CallbackInfo info) {
@@ -62,7 +63,7 @@ public abstract class MinecraftClientMixin {
             if (path == null) {
                 continue;
             }
-            ClientDB.client.debugRenderer.pathfindingDebugRenderer.addPath(path.getLeft(), path.getMiddle(), path.getRight());
+            debugRenderer.pathfindingDebugRenderer.addPath(path.getLeft(), path.getMiddle(), path.getRight());
             ClientDB.newPaths.remove(path);
         }
 
@@ -74,7 +75,7 @@ public abstract class MinecraftClientMixin {
             if (update == null) {
                 continue;
             }
-            ((NeighborUpdateDebugRenderer)(ClientDB.client.debugRenderer.neighborUpdateDebugRenderer)).addNeighborUpdate(update.getLeft(), update.getRight());
+            ((NeighborUpdateDebugRenderer)(debugRenderer.neighborUpdateDebugRenderer)).addNeighborUpdate(update.getLeft(), update.getRight());
             ClientDB.newNeighborUpdates.remove(update);
         }
 
@@ -93,7 +94,7 @@ public abstract class MinecraftClientMixin {
                 childrenBoxes.add(child.getBoundingBox());
                 someColorBools.add(true);
             }
-            ClientDB.client.debugRenderer.structureDebugRenderer.addStructure(structureStart.getBoundingBox(), childrenBoxes, someColorBools, structureStartPair.getLeft().getDimension());
+            debugRenderer.structureDebugRenderer.addStructure(structureStart.getBoundingBox(), childrenBoxes, someColorBools, structureStartPair.getLeft().getDimension());
             ClientDB.newStructures.remove(structure);
         }
 
@@ -113,7 +114,7 @@ public abstract class MinecraftClientMixin {
                 freeTickets.set(registryEntry.value().ticketCount());
             });
 
-            ClientDB.client.debugRenderer.villageDebugRenderer.addPointOfInterest(new VillageDebugRenderer.PointOfInterest(
+            debugRenderer.villageDebugRenderer.addPointOfInterest(new VillageDebugRenderer.PointOfInterest(
                     pos,
                     state.getBlock().getClass().getSimpleName(),
                     freeTickets.get()
@@ -129,7 +130,7 @@ public abstract class MinecraftClientMixin {
             if (bee == null) {
                 continue;
             }
-            ClientDB.client.debugRenderer.beeDebugRenderer.addBee(new BeeDebugRenderer.Bee(bee.getUuid(), bee.getId(), bee.getPos(), bee.getNavigation().getCurrentPath(), bee.getHivePos(), bee.getFlowerPos(), 0));
+            debugRenderer.beeDebugRenderer.addBee(new BeeDebugRenderer.Bee(bee.getUuid(), bee.getId(), bee.getPos(), bee.getNavigation().getCurrentPath(), bee.getHivePos(), bee.getFlowerPos(), 0));
             ClientDB.newBees.remove(bee);
         }
 
@@ -140,7 +141,7 @@ public abstract class MinecraftClientMixin {
             if (beehive == null || world == null) {
                 continue;
             }
-            ClientDB.client.debugRenderer.beeDebugRenderer.addHive(new BeeDebugRenderer.Hive(beehive.getPos(), beehive.getClass().getSimpleName(), beehive.getBeeCount(), BeehiveBlockEntity.getHoneyLevel(beehive.getCachedState()), beehive.isSmoked(), world.getTime()));
+            debugRenderer.beeDebugRenderer.addHive(new BeeDebugRenderer.Hive(beehive.getPos(), beehive.getClass().getSimpleName(), beehive.getBeeCount(), BeehiveBlockEntity.getHoneyLevel(beehive.getCachedState()), beehive.isSmoked(), world.getTime()));
             ClientDB.newBeehives.remove(beehive);
         }
 
@@ -152,18 +153,24 @@ public abstract class MinecraftClientMixin {
             if (goalPair == null) {
                 continue;
             }
-            MobEntity mob = goalPair.getLeft();
-            GoalSelector goalSelector = goalPair.getRight();
 
-            Set<PrioritizedGoal> goalList = goalSelector.getGoals();
-            List<GoalSelectorDebugRenderer.GoalSelector> goalListOut = new ArrayList<>();
-            int i = 0;
-            for (PrioritizedGoal goal : goalList) {
-                goalListOut.add(new GoalSelectorDebugRenderer.GoalSelector(mob.getBlockPos(), i, goal.getGoal().toString(), goal.isRunning()));
-                i++;
+            MobEntity mob = goalPair.getLeft();
+            if (mob.isAlive()) {
+                GoalSelector goalSelector = goalPair.getRight();
+
+                Set<PrioritizedGoal> goalList = goalSelector.getGoals();
+                List<GoalSelectorDebugRenderer.GoalSelector> goalListOut = new ArrayList<>();
+                int i = 0;
+                for (PrioritizedGoal goal : goalList) {
+                    goalListOut.add(new GoalSelectorDebugRenderer.GoalSelector(mob.getBlockPos(), i, goal.getGoal().toString(), goal.isRunning()));
+                    i++;
+                }
+
+                debugRenderer.goalSelectorDebugRenderer.setGoalSelectorList(mob.getId(), goalListOut);
+            } else {
+                debugRenderer.goalSelectorDebugRenderer.removeGoalSelectorList(mob.getId());
             }
 
-            ClientDB.client.debugRenderer.goalSelectorDebugRenderer.setGoalSelectorList(mob.getId(), goalListOut);
             ClientDB.newGoalSelectors.remove(goalPair);
         }
 
@@ -174,7 +181,7 @@ public abstract class MinecraftClientMixin {
             if (gameEventPair == null) {
                 continue;
             }
-            ClientDB.client.debugRenderer.gameEventDebugRenderer.addEvent(gameEventPair.getLeft(), gameEventPair.getRight());
+            debugRenderer.gameEventDebugRenderer.addEvent(gameEventPair.getLeft(), gameEventPair.getRight());
             ClientDB.newGameEvents.remove(gameEventPair);
         }
 
@@ -185,7 +192,7 @@ public abstract class MinecraftClientMixin {
             if (gameEventListener == null) {
                 continue;
             }
-            ClientDB.client.debugRenderer.gameEventDebugRenderer.addListener(gameEventListener.getPositionSource(), gameEventListener.getRange());
+            debugRenderer.gameEventDebugRenderer.addListener(gameEventListener.getPositionSource(), gameEventListener.getRange());
             ClientDB.newGameEventListeners.remove(e);
         }
 
@@ -200,7 +207,7 @@ public abstract class MinecraftClientMixin {
                 continue;
             }
 
-            ClientDB.client.debugRenderer.villageDebugRenderer.addBrain(new VillageDebugRenderer.Brain(
+            debugRenderer.villageDebugRenderer.addBrain(new VillageDebugRenderer.Brain(
                     villager.getUuid(),
                     villager.getId(),
                     NameGenerator.name(villager),
@@ -216,5 +223,37 @@ public abstract class MinecraftClientMixin {
             ));
             ClientDB.newBrains.remove(villager);
         }
+
+        Object[] raids = ClientDB.newRaids.toArray();
+        Collection<BlockPos> raidPos = new ArrayList<>();
+        for (Object r : raids) {
+            Collection<Raid> raid = (Collection<Raid>) r;
+//            sometimes its null???
+            if (raid == null || raid.isEmpty()) {
+                continue;
+            }
+
+            for (Raid rd : raid) {
+                raidPos.add(rd.getCenter());
+            }
+        }
+
+        if (!raidPos.isEmpty()) {
+            debugRenderer.raidCenterDebugRenderer.setRaidCenters(raidPos);
+        }
+
+//        Object[] chunks = ClientDB.newChunkChanges.toArray();
+//        for (Object c : chunks) {
+//            Pair<World, ChunkPos> chunkPair = (Pair<World, ChunkPos>) c;
+////            sometimes its null???
+//            if (chunkPair == null) {
+//                continue;
+//            }
+//
+//            World world = chunkPair.getLeft();
+//            ChunkPos chunkPos = chunkPair.getRight();
+//
+//            ((WorldGenAttemptDebugRenderer) debugRenderer.worldGenAttemptDebugRenderer).addBox();
+//        }
     }
 }
