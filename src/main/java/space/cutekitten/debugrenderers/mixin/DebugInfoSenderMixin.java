@@ -22,7 +22,6 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.village.raid.Raid;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.World;
@@ -76,14 +75,14 @@ public abstract class DebugInfoSenderMixin {
     }
     @Inject(method = "sendPoi", at = @At("RETURN"))
     private static void sendPoi(ServerWorld world, BlockPos pos, CallbackInfo ci) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(pos);
-//        TODO: use ifPresent() instead of just .get()
-        RegistryEntry<PointOfInterestType> entry = PointOfInterestTypes.getTypeForState(world.getBlockState(pos)).get();
-        PointOfInterestType type = entry.value();
-        buf.writeString(world.getBlockState(pos).getBlock().getName().getString());
-        buf.writeInt(type.ticketCount());
-        sendToAll(world, buf, CustomPayloadS2CPacket.DEBUG_POI_ADDED);
+        PointOfInterestTypes.getTypeForState(world.getBlockState(pos)).ifPresent(entry -> {
+            PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+            buf.writeBlockPos(pos);
+            PointOfInterestType type = entry.value();
+            buf.writeString(world.getBlockState(pos).getBlock().getName().getString());
+            buf.writeInt(type.ticketCount());
+            sendToAll(world, buf, CustomPayloadS2CPacket.DEBUG_POI_ADDED);
+        });
     }
     @Inject(method = "sendPoiRemoval", at = @At("RETURN"), cancellable = true)
     private static void sendPoiRemoval(ServerWorld world, BlockPos pos, CallbackInfo ci) {
