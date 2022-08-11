@@ -172,7 +172,7 @@ public abstract class DebugInfoSenderMixin {
         if (!(world instanceof ServerWorld serverWorld)) return;
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         buf.writeBlockPos(pos);
-        buf.writeString(blockEntity.getClass().getSimpleName());
+        buf.writeString(state.getBlock().getName().getString());
         buf.writeInt(blockEntity.getBeeCount());
         buf.writeInt(BeehiveBlockEntity.getHoneyLevel(state));
         buf.writeBoolean(blockEntity.isSmoked());
